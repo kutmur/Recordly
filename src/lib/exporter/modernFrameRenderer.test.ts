@@ -203,6 +203,59 @@ function createRenderer() {
 }
 
 describe("ModernFrameRenderer Pixi lifecycle", () => {
+	it("defaults to webgl before webgpu when no explicit backend is requested", async () => {
+		pixiApplicationInstancesMock.length = 0;
+		pixiInitializationErrorsMock.length = 0;
+		vi.stubGlobal("navigator", { gpu: {} });
+
+		try {
+			const renderer = createRenderer() as unknown as {
+				config: { preferredRenderBackend?: "webgl" | "webgpu" };
+				createPixiApplication: (
+					canvas: HTMLCanvasElement,
+				) => Promise<{ backend: "webgl" | "webgpu" }>;
+			};
+			delete renderer.config.preferredRenderBackend;
+
+			await expect(
+				renderer.createPixiApplication({} as HTMLCanvasElement),
+			).resolves.toMatchObject({
+				backend: "webgl",
+			});
+
+			expect(pixiApplicationInstancesMock).toHaveLength(1);
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it("falls back to webgpu when webgl initialization fails and no backend was requested", async () => {
+		pixiApplicationInstancesMock.length = 0;
+		pixiInitializationErrorsMock.length = 0;
+		pixiInitializationErrorsMock.push(new Error("WebGL initialization failed"), undefined);
+		vi.stubGlobal("navigator", { gpu: {} });
+
+		try {
+			const renderer = createRenderer() as unknown as {
+				config: { preferredRenderBackend?: "webgl" | "webgpu" };
+				createPixiApplication: (
+					canvas: HTMLCanvasElement,
+				) => Promise<{ backend: "webgl" | "webgpu" }>;
+			};
+			delete renderer.config.preferredRenderBackend;
+
+			await expect(
+				renderer.createPixiApplication({} as HTMLCanvasElement),
+			).resolves.toMatchObject({
+				backend: "webgpu",
+			});
+
+			expect(pixiApplicationInstancesMock).toHaveLength(2);
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
 	it("continues to the next backend when failed-init cleanup would throw", async () => {
 		pixiApplicationInstancesMock.length = 0;
 		pixiInitializationErrorsMock.length = 0;
