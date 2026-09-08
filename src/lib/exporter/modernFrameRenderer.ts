@@ -100,6 +100,7 @@ import { buildTemporalSamplePlanUs, getTemporalMotionBlurConfig } from "./tempor
 
 const TEMPORAL_ZOOM_MOTION_BLUR_ENABLED = false;
 
+import { getDefaultLightningRenderBackend } from "./backendPolicy";
 import type { ExportRenderBackend } from "./types";
 
 interface FrameRenderConfig {
@@ -639,15 +640,10 @@ export class FrameRenderer {
 			powerPreference: "high-performance" as const,
 		};
 
-		const preferredRenderBackend = this.config.preferredRenderBackend;
+		const preferredRenderBackend =
+			this.config.preferredRenderBackend ?? getDefaultLightningRenderBackend();
 		const backendOrder: ExportRenderBackend[] =
-			preferredRenderBackend === "webgl"
-				? ["webgl", "webgpu"]
-				: preferredRenderBackend === "webgpu"
-					? ["webgpu", "webgl"]
-					: typeof navigator !== "undefined" && "gpu" in navigator
-						? ["webgpu", "webgl"]
-						: ["webgl"];
+			preferredRenderBackend === "webgpu" ? ["webgpu", "webgl"] : ["webgl", "webgpu"];
 		const failures: PixiRendererAttempt[] = [];
 
 		for (const backend of backendOrder) {
